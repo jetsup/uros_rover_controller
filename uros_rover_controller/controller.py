@@ -50,7 +50,6 @@ class RoverController(Node):  # publisher node
             Vector3, "uros_vehicle_control", qos_profile
         )
 
-        # self.timer = self.create_timer(0.5, self.timer_callback)
         self.key_press_timer = self.create_timer(0.01, self.keyboard_timer_callback)
         self.get_logger().info("RoverController node started, publishing...")
 
@@ -154,36 +153,6 @@ class RoverController(Node):  # publisher node
             self.should_turn_right = False
         elif key.char == "h":
             self.hoot_vehicle = False
-
-    def timer_callback(self):
-        msg_left_motor = Vector3()
-        msg_left_motor.x = random()
-        msg_left_motor.y = random()
-        msg_left_motor.z = random()
-
-        # Publish on the left motor control topic
-        self.left_motor_publisher.publish(msg_left_motor)
-        self.get_logger().info(
-            f"Publishing to uros_left_motor_control: {msg_left_motor}"
-        )
-
-        msg_right_motor = Vector3()
-        msg_right_motor.x = random()
-        msg_right_motor.y = random()
-        msg_right_motor.z = random()
-        self.right_motor_publisher.publish(msg_right_motor)
-        self.get_logger().info(
-            f"Publishing to uros_right_motor_control: {msg_right_motor}"
-        )
-
-        msg_lights_control = Vector3()
-        msg_lights_control.x = random()
-        msg_lights_control.y = random()
-        msg_lights_control.z = random()
-        self.vehicle_lights_publisher.publish(msg_lights_control)
-        self.get_logger().info(
-            f"Publishing to uros_vehicle_control: {msg_lights_control}"
-        )
 
     def keyboard_timer_callback(self):
         # check if the key is pressed and if not start doing the above
