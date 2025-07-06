@@ -54,23 +54,23 @@ class RoverController(Node):  # publisher node
         self.get_logger().info("RoverController node started.")
 
     # --- Methods for controlling rover state from GUI ---
-    def set_move_forward(self, state):
+    def set_move_forward(self, state: bool):
         self.should_move_forward = state
         if state:
             self.direction = 1  # Ensure direction is forward when moving forward
         # print(f"Set move forward to {state}") # Debug print
 
-    def set_move_backward(self, state):
+    def set_move_backward(self, state: bool):
         self.should_move_backward = state
         if state:
             self.direction = -1  # Ensure direction is reverse when moving backward
         # print(f"Set move backward to {state}") # Debug print
 
-    def set_turn_left(self, state):
+    def set_turn_left(self, state: bool):
         self.should_turn_left = state
         # print(f"Set turn left to {state}") # Debug print
 
-    def set_turn_right(self, state):
+    def set_turn_right(self, state: bool):
         self.should_turn_right = state
         # print(f"Set turn right to {state}") # Debug print
 
@@ -105,7 +105,7 @@ class RoverController(Node):  # publisher node
         self.tail_lights_on = not self.tail_lights_on
         self.get_logger().info(f"Tail lights {'on' if self.tail_lights_on else 'off'}.")
 
-    def set_hoot_vehicle(self, state):
+    def set_hoot_vehicle(self, state: bool):
         self.hoot_vehicle = state
         self.get_logger().info(f"Hoot vehicle {'on' if self.hoot_vehicle else 'off'}.")
 
@@ -135,9 +135,10 @@ class RoverController(Node):  # publisher node
 
         if self.should_turn_left:
             if self.right_turning_speed != 0:
-                self.right_turning_speed -= 2.0
+                self.right_turning_speed -= 4.0
                 if self.right_turning_speed < 0:
                     self.right_turning_speed = 0.0
+                return  # Don't increase left speed if turning left
             if self.left_turning_speed < 255:
                 self.left_turning_speed += 4.0
         else:
@@ -148,9 +149,10 @@ class RoverController(Node):  # publisher node
 
         if self.should_turn_right:
             if self.left_turning_speed != 0:
-                self.left_turning_speed -= 2.0
+                self.left_turning_speed -= 4.0
                 if self.left_turning_speed < 0:
                     self.left_turning_speed = 0.0
+                return  # Don't increase right speed if turning right
             if self.right_turning_speed < 255:
                 self.right_turning_speed += 4.0
         else:
@@ -167,37 +169,28 @@ class RoverController(Node):  # publisher node
         left_motor_final_speed = self.vehicle_speed
         right_motor_final_speed = self.vehicle_speed
 
-        if self.should_turn_left and not self.should_turn_right:
+        if (
+            self.should_turn_left and not self.should_turn_right
+        ) or self.left_turning_speed > 0:
             if self.vehicle_speed >= 0:  # Moving forward or stopped
-                left_motor_final_speed = max(
-                    0.0, self.vehicle_speed - self.left_turning_speed
-                )
-                right_motor_final_speed = (
-                    self.vehicle_speed
-                )  # Right motor maintains speed
+                left_motor_final_speed -= self.left_turning_speed
             else:  # Moving backward
-                left_motor_final_speed = min(
-                    0.0, self.vehicle_speed + self.left_turning_speed
-                )
-                right_motor_final_speed = (
-                    self.vehicle_speed
-                )  # Right motor maintains speed
+                left_motor_final_speed += self.left_turning_speed
+        elif (
+            self.should_turn_right and not self.should_turn_left
+        ) or self.right_turning_speed > 0:
+            if self.vehicle_speed >= 0:
+                right_motor_final_speed -= self.right_turning_speed
+            else:
+                right_motor_final_speed += self.right_turning_speed
 
-        elif self.should_turn_right and not self.should_turn_left:
-            if self.vehicle_speed >= 0:  # Moving forward or stopped
-                right_motor_final_speed = max(
-                    0.0, self.vehicle_speed - self.right_turning_speed
-                )
-                left_motor_final_speed = (
-                    self.vehicle_speed
-                )  # Left motor maintains speed
-            else:  # Moving backward
-                right_motor_final_speed = min(
-                    0.0, self.vehicle_speed + self.right_turning_speed
-                )
-                left_motor_final_speed = (
-                    self.vehicle_speed
-                )  # Left motor maintains speed
+        print(
+            f"Left F: {left_motor_final_speed:.2f} Left: {self.left_turning_speed} Right F: {right_motor_final_speed:.2f} Right: {self.right_turning_speed}"
+        )
+
+        # Clamp motor outputs again (in case speed dips below 0 or overshoots)
+        left_motor_final_speed = max(-255.0, min(left_motor_final_speed, 255.0))
+        right_motor_final_speed = max(-255.0, min(right_motor_final_speed, 255.0))
 
         self.msg_left_motor.x = left_motor_final_speed
         self.msg_left_motor.y = float(self.direction)
@@ -221,7 +214,7 @@ class RoverController(Node):  # publisher node
 
 
 class RoverGUI(tk.Tk):
-    def __init__(self, rover_controller_node):
+    def __init__(self, rover_controller_node: RoverController):
         super().__init__()
         self.title("Rover Controller")
         self.geometry("450x640")
@@ -322,7 +315,9 @@ class RoverGUI(tk.Tk):
         self.hoot_button = ttk.Button(
             lights_frame,
             text="H: Hoot",
-            command=lambda: self.rover_controller.set_hoot_vehicle(True),
+            command=lambda: self.rover_controller.set_hoot_vehicle(
+                not self.rover_controller.hoot_vehicle
+            ),
         )
         self.hoot_button.grid(
             row=1, column=0, columnspan=2, padx=5, pady=5, sticky="ew"
