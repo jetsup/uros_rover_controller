@@ -36,6 +36,6 @@ This package provides a controller for a rover using ROS 2 and micro-ROS. It inc
    ros2 run uros_rover_controller rover_controller
    ```
 
-## TODO
+## Fixes and Features
 
-- [ ] Handle right-left keyboard input for turning
+- [X] Handle right-left keyboard input for turning
