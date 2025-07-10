@@ -122,7 +122,7 @@ class RoverController(Node):  # publisher node
                 self.vehicle_speed -= 5.0
             # If currently going forward, prioritize stopping or accelerating backward faster
             if self.vehicle_speed > 0:
-                self.vehicle_speed -= 5.04444444
+                self.vehicle_speed -= 5.0
         else:  # No forward/backward key pressed, decelerate
             if self.vehicle_speed > 0:
                 self.vehicle_speed -= 1.0
