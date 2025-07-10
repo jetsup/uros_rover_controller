@@ -113,16 +113,16 @@ class RoverController(Node):  # publisher node
         # Apply speed changes based on flags
         if self.should_move_forward:
             if self.vehicle_speed < 255:
-                self.vehicle_speed += 2.0
+                self.vehicle_speed += 5.0
             # If currently reversing, prioritize stopping or accelerating forward faster
             if self.vehicle_speed < 0:
                 self.vehicle_speed += 5.0
         elif self.should_move_backward:
             if self.vehicle_speed > -255:
-                self.vehicle_speed -= 2.0
+                self.vehicle_speed -= 5.0
             # If currently going forward, prioritize stopping or accelerating backward faster
             if self.vehicle_speed > 0:
-                self.vehicle_speed -= 5.0
+                self.vehicle_speed -= 5.04444444
         else:  # No forward/backward key pressed, decelerate
             if self.vehicle_speed > 0:
                 self.vehicle_speed -= 1.0
@@ -461,12 +461,23 @@ class RoverGUI(tk.Tk):
 
 
 def main(args=None):
-    rclpy.init(args=args)
+    try:
+        rclpy.init(args=args)
 
-    rover_controller = RoverController()
+        rover_controller = RoverController()
 
-    app = RoverGUI(rover_controller)
-    app.mainloop()
+        app = RoverGUI(rover_controller)
+        app.mainloop()
+    except KeyboardInterrupt:
+        print("Shutting down Rover Controller GUI.")
+    except Exception as e:
+        print(f"Error in Rover Controller GUI: {e}")
+    finally:
+        try:
+            rover_controller.destroy_node() # type: ignore
+            rclpy.shutdown()
+        except Exception as e:
+            print(f"Error during shutdown: {e}")
 
 
 if __name__ == "__main__":
