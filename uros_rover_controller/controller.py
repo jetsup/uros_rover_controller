@@ -26,6 +26,11 @@ class RoverController(Node):  # publisher node
         self.tail_lights_on = False
         self.hoot_vehicle = False
 
+        # Track previous states for publishing optimization
+        self.prev_headlights_on = False
+        self.prev_tail_lights_on = False
+        self.prev_hoot_vehicle = False
+
         self.msg_left_motor = Vector3()
         self.msg_right_motor = Vector3()
         # (head_lights, tail_lights, hoot_vehicle)
@@ -106,8 +111,11 @@ class RoverController(Node):  # publisher node
         self.get_logger().info(f"Tail lights {'on' if self.tail_lights_on else 'off'}.")
 
     def set_hoot_vehicle(self, state: bool):
-        self.hoot_vehicle = state
-        self.get_logger().info(f"Hoot vehicle {'on' if self.hoot_vehicle else 'off'}.")
+        if self.hoot_vehicle != state:
+            self.hoot_vehicle = state
+            self.get_logger().info(
+                f"Hoot vehicle {'on' if self.hoot_vehicle else 'off'}."
+            )
 
     def update_rover_state(self):
         # Apply speed changes based on flags
@@ -200,12 +208,25 @@ class RoverController(Node):  # publisher node
         self.msg_right_motor.y = float(self.direction)
         self.msg_right_motor.z = 0.0  # Unused for this motor
 
-        self.msg_vehicle_control.x = 1.0 if self.headlights_on else 0.0
-        self.msg_vehicle_control.y = 1.0 if self.tail_lights_on else 0.0
-        self.msg_vehicle_control.z = 1.0 if self.hoot_vehicle else 0.0
-
         self.left_motor_publisher.publish(self.msg_left_motor)
         self.right_motor_publisher.publish(self.msg_right_motor)
+
+        # Update vehicle control message only if state has changed
+        headlights_changed = self.headlights_on != self.prev_headlights_on
+        tail_lights_changed = self.tail_lights_on != self.prev_tail_lights_on
+        hoot_changed = self.hoot_vehicle != self.prev_hoot_vehicle
+
+        if headlights_changed or tail_lights_changed or hoot_changed:
+            self.msg_vehicle_control.x = 1.0 if self.headlights_on else 0.0
+            self.msg_vehicle_control.y = 1.0 if self.tail_lights_on else 0.0
+            self.msg_vehicle_control.z = 1.0 if self.hoot_vehicle else 0.0
+            self.vehicle_vehicle_publisher.publish(self.msg_vehicle_control)
+
+            # Update previous states after publishing
+            self.prev_headlights_on = self.headlights_on
+            self.prev_tail_lights_on = self.tail_lights_on
+            self.prev_hoot_vehicle = self.hoot_vehicle
+
         self.vehicle_vehicle_publisher.publish(self.msg_vehicle_control)
 
         # self.get_logger().info(
@@ -389,28 +410,33 @@ class RoverGUI(tk.Tk):
             "<KeyPress-Up>", lambda event: self.rover_controller.set_move_forward(True)
         )
         self.bind(
-            "<KeyRelease-Up>", lambda event: self.rover_controller.set_move_forward(False)
+            "<KeyRelease-Up>",
+            lambda event: self.rover_controller.set_move_forward(False),
         )
 
         self.bind(
-            "<KeyPress-Down>", lambda event: self.rover_controller.set_move_backward(True)
+            "<KeyPress-Down>",
+            lambda event: self.rover_controller.set_move_backward(True),
         )
         self.bind(
-            "<KeyRelease-Down>", lambda event: self.rover_controller.set_move_backward(False)
+            "<KeyRelease-Down>",
+            lambda event: self.rover_controller.set_move_backward(False),
         )
 
         self.bind(
             "<KeyPress-Left>", lambda event: self.rover_controller.set_turn_left(True)
         )
         self.bind(
-            "<KeyRelease-Left>", lambda event: self.rover_controller.set_turn_left(False)
+            "<KeyRelease-Left>",
+            lambda event: self.rover_controller.set_turn_left(False),
         )
 
         self.bind(
             "<KeyPress-Right>", lambda event: self.rover_controller.set_turn_right(True)
         )
         self.bind(
-            "<KeyRelease-Right>", lambda event: self.rover_controller.set_turn_right(False)
+            "<KeyRelease-Right>",
+            lambda event: self.rover_controller.set_turn_right(False),
         )
 
         self.bind(
@@ -503,7 +529,7 @@ def main(args=None):
         print(f"Error in Rover Controller GUI: {e}")
     finally:
         try:
-            rover_controller.destroy_node() # type: ignore
+            rover_controller.destroy_node()  # type: ignore
             rclpy.shutdown()
         except Exception as e:
             print(f"Error during shutdown: {e}")
