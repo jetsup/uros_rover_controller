@@ -384,6 +384,35 @@ class RoverGUI(tk.Tk):
             "<KeyRelease-d>", lambda event: self.rover_controller.set_turn_right(False)
         )
 
+        # Arrow keys
+        self.bind(
+            "<KeyPress-Up>", lambda event: self.rover_controller.set_move_forward(True)
+        )
+        self.bind(
+            "<KeyRelease-Up>", lambda event: self.rover_controller.set_move_forward(False)
+        )
+
+        self.bind(
+            "<KeyPress-Down>", lambda event: self.rover_controller.set_move_backward(True)
+        )
+        self.bind(
+            "<KeyRelease-Down>", lambda event: self.rover_controller.set_move_backward(False)
+        )
+
+        self.bind(
+            "<KeyPress-Left>", lambda event: self.rover_controller.set_turn_left(True)
+        )
+        self.bind(
+            "<KeyRelease-Left>", lambda event: self.rover_controller.set_turn_left(False)
+        )
+
+        self.bind(
+            "<KeyPress-Right>", lambda event: self.rover_controller.set_turn_right(True)
+        )
+        self.bind(
+            "<KeyRelease-Right>", lambda event: self.rover_controller.set_turn_right(False)
+        )
+
         self.bind(
             "<KeyPress-space>", lambda event: self.rover_controller.stop_all_motion()
         )
